@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SecureLocal | Part 2 Project Report</title>
+  <style>
+    :root{font-family:"Segoe UI",Arial,sans-serif;color:#202b3b;background:#fff}
+    *{box-sizing:border-box}
+    body{margin:0 auto;max-width:980px;padding:48px 56px;line-height:1.55}
+    header{border-bottom:4px solid #b54825;padding-bottom:24px;margin-bottom:32px}
+    .eyebrow{color:#a63e1d;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+    h1{font-size:38px;line-height:1.1;margin:.3em 0}
+    h2{font-size:22px;border-bottom:1px solid #e3e7ed;padding-bottom:8px;margin-top:32px}
+    h3{font-size:17px;margin-bottom:4px}
+    p,li{font-size:14px}
+    table{width:100%;border-collapse:collapse;font-size:12px;margin:12px 0 22px}
+    th,td{border:1px solid #dfe4eb;padding:8px 9px;text-align:left;vertical-align:top}
+    th{background:#f3f5f8}
+    .meta{color:#617084;font-size:13px}
+    .callout{background:#fff7ed;border-left:4px solid #c2410c;padding:12px 16px}
+    .pass{color:#176b3a;font-weight:700}
+    footer{margin-top:42px;padding-top:14px;border-top:1px solid #dfe4eb;color:#667085;font-size:11px}
+    @media print{body{max-width:none;padding:15mm 16mm}h2{break-after:avoid}table{break-inside:avoid}tr{break-inside:avoid}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="eyebrow">SecureLocal · Part 2</div>
+    <h1>Overview, Permissions & Proof</h1>
+    <div class="meta">Prepared by Lawrence Dial · November 26, 2026 · Project folder v1</div>
+  </header>
+
+  <h2>1. Project overview</h2>
+  <p>SecureLocal is a local-first web application for account registration, food ordering, incident reporting, MFA, and role-based administration. The stack is Node.js, Express, EJS, and SQLite. Components are separated by responsibility: route modules, authentication middleware, security helpers, database schema, views, and public assets.</p>
+  <ul>
+    <li>Authentication uses bcrypt password hashes, rate limits, lockouts, and optional TOTP MFA.</li>
+    <li>Browser-changing requests require CSRF tokens; order contact details are encrypted at rest.</li>
+    <li>Administrative actions and sensitive views append to a SHA-256 hash-chained audit log.</li>
+    <li>Admin routes require the exact Admin role and fresh MFA. Role checks read current database state.</li>
+  </ul>
+
+  <h2>2. Permission matrix</h2>
+  <table>
+    <thead><tr><th>Capability</th><th>Anonymous</th><th>Customer</th><th>Staff</th><th>Security Officer</th><th>Owner</th><th>Admin</th></tr></thead>
+    <tbody>
+      <tr><td>Public home/menu/privacy</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+      <tr><td>Personal profile, orders, incidents</td><td>No</td><td>Own only</td><td>Own only</td><td>Own only</td><td>Own only</td><td>Own + global tools</td></tr>
+      <tr><td>Admin dashboard, users, audit logs, menu admin</td><td>No</td><td>No</td><td>No</td><td>No</td><td>No</td><td>Yes, recent MFA</td></tr>
+      <tr><td>View all orders and change their status</td><td>No</td><td>No</td><td>No</td><td>No</td><td>No</td><td>Yes, recent MFA</td></tr>
+      <tr><td>View all incidents and change status</td><td>No</td><td>No</td><td>No</td><td>No</td><td>No</td><td>Yes, recent MFA</td></tr>
+      <tr><td>Change user roles</td><td>No</td><td>No</td><td>No</td><td>No</td><td>No</td><td>Admin/Staff/Security Officer/Customer; Owner protected</td></tr>
+      <tr><td>Database diagnostic endpoint</td><td>No</td><td>No</td><td>No</td><td>No</td><td>No</td><td>Yes, recent MFA</td></tr>
+    </tbody>
+  </table>
+  <p class="callout"><strong>Policy note:</strong> Owner is a separate protected role. The requested Admin-only policy means Owner does not inherit `/admin/*` access, and Admin cannot grant or alter Owner accounts.</p>
+
+  <h2>3. Requirements tracker</h2>
+  <table>
+    <thead><tr><th>Requirement</th><th>Implementation</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Node/Express/SQLite stack</td><td>Package scripts, Express server, SQLite schema</td><td class="pass">Complete</td></tr>
+      <tr><td>Separate components</td><td>Routes, middleware, security helpers, views, database module</td><td class="pass">Complete</td></tr>
+      <tr><td>Demo users for every role</td><td>Development-only idempotent seed command</td><td class="pass">Complete</td></tr>
+      <tr><td>Clean-copy run instructions and folder map</td><td>README and `.env.example`</td><td class="pass">Complete</td></tr>
+      <tr><td>Admin-only server-side protection</td><td>Fresh role checks plus MFA on admin data and actions</td><td class="pass">Complete</td></tr>
+      <tr><td>Five live proof checks/windows</td><td>`npm run proofs` creates five individually screenshot-ready HTML pages</td><td class="pass">Runnable</td></tr>
+      <tr><td>Part 2 report and PDF</td><td>This report; print/export to the submitted PDF</td><td class="pass">Complete</td></tr>
+    </tbody>
+  </table>
+
+  <h2>4. Live test table</h2>
+  <table>
+    <thead><tr><th>#</th><th>Proof</th><th>Expected result</th><th>How to run</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Login and injection-shaped input</td><td>Login page responds 200; invalid SQL-shaped username is rejected with 401</td><td>`npm run proofs` · proof-01</td></tr>
+      <tr><td>2</td><td>CSRF protection</td><td>Tokenless state-changing POST is rejected with 403</td><td>`npm run proofs` · proof-02</td></tr>
+      <tr><td>3</td><td>Unauthenticated admin access</td><td>`/admin` redirects to `/login`</td><td>`npm run proofs` · proof-03</td></tr>
+      <tr><td>4</td><td>Role enforcement</td><td>Admin passes; Customer receives 403</td><td>`npm run proofs` · proof-04</td></tr>
+      <tr><td>5</td><td>MFA and audit integrity</td><td>Admin is redirected to MFA setup/step-up; audit chain verifies</td><td>`npm run proofs` · proof-05</td></tr>
+    </tbody>
+  </table>
+  <p>Proof runner output and the five pages are generated from live HTTP responses and the app's actual middleware/database checks. A generated PASS page is created only after its assertions pass.</p>
+
+  <h2>5. Member explanations and responsibilities</h2>
+  <table>
+    <thead><tr><th>Label from assignment</th><th>Responsibility</th><th>Project area</th></tr></thead>
+    <tbody>
+      <tr><td>All members</td><td>Build and integrate components; review the merged app</td><td>`app/routes/`, `app/views/`, `public/`</td></tr>
+      <tr><td>E</td><td>Coordinate merging and README; involve all members in clean-copy test</td><td>Project integration and setup docs</td></tr>
+      <tr><td>B</td><td>Lead the five live proofs</td><td>`scripts/run-live-proofs.js`, `evidence/proofs/`</td></tr>
+      <tr><td>A</td><td>Compile the final report and submission</td><td>`docs/`, project folder v1, PDF</td></tr>
+    </tbody>
+  </table>
+  <p class="meta">Only member initials were supplied in the assignment image; replace them with the team's full names if required.</p>
+
+  <h2>6. Deployment note</h2>
+  <p>The current setup is intended for local coursework demonstration. For a real deployment, set `NODE_ENV=production`, use HTTPS and unique generated secrets, use a persistent server-side session store, protect and back up the SQLite database, provision roles through an audited process, and do not seed demo users. Keep `.env`, database files, and demo passwords out of source control and submitted archives.</p>
+
+  <footer>SecureLocal · Part 2 submission source · Prepared by Lawrence Dial · November 26, 2026</footer>
+</body>
+</html>
